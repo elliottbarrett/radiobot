@@ -75,18 +75,18 @@ def handle_youtube(text, user, channel):
 
 # YOUTUBE
 flow = flow_from_clientsecrets(YOUTUBE_CLIENT_SECRETS_FILE,
-  message=YOUTUBE_MISSING_SECRETS_MSG,
-  scope=YOUTUBE_SCOPE)
+    message=YOUTUBE_MISSING_SECRETS_MSG,
+    scope=YOUTUBE_SCOPE)
 
 storage = Storage("%s-oauth2.json" % sys.argv[0])
 credentials = storage.get()
 
 if credentials is None or credentials.invalid:
-  flags = argparser.parse_args()
-  credentials = run_flow(flow, storage, flags)
+    flags = argparser.parse_args()
+    credentials = run_flow(flow, storage, flags)
 
 youtube = build(YOUTUBE_API_SERVICE_NAME, YOUTUBE_API_VERSION,
-  http=credentials.authorize(httplib2.Http()))
+    http=credentials.authorize(httplib2.Http()))
 
 def create_youtube_playlist(name):
     print "..creating youutbe playlist"
