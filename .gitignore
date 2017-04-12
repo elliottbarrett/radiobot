@@ -1,0 +1,9 @@
+radiobot/radiobot.py-oauth2.json
+radiobot/lib/*
+radiobot/bin/*
+radiobot/include/*
+radiobot/pip-selfcheck.json
+radiobot/.Python
+token.txt
+token_r360.txt
+youtubeSecrets.json
