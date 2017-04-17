@@ -99,7 +99,7 @@ def handle_bot_command(text, user, channel):
         elif command == "ALBUM":
             return ContinueType.ALBUM
         elif command == "420":
-            send_slack(":420: :bong: bud: :bobmarley: :bud: :bong: :420:")
+            send_slack(":420: :bong: bud: :bobmarley: :bud: :bong: :420:", channel)
             return ContinueType.STANDARD
         else:
             send_slack("Sorry, I didn't get that - ignoring your input just in case", channel)
