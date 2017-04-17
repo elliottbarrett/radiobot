@@ -4,6 +4,7 @@ import sys
 import httplib2
 import shelve
 
+from enum import Enum
 from slackclient import SlackClient
 from oauth2client.client import OAuth2WebServerFlow
 from oauth2client.client import flow_from_clientsecrets
@@ -11,6 +12,13 @@ from oauth2client.file import Storage
 from oauth2client.tools import argparser
 from oauth2client.tools import run_flow
 from apiclient.discovery import build
+
+class ContinueType(Enum):
+    NONE = 0
+    STANDARD = 1
+    USER_ONLY = 2
+    GROUP_ONLY = 3
+    ALBUM_LIST = 4
 
 slack_client = SlackClient(os.environ.get('SLACK_BOT_TOKEN'))
 existing_playlists = shelve.open('playlists.shelf') 
@@ -22,6 +30,19 @@ YOUTUBE_API_SERVICE_NAME = "youtube"
 YOUTUBE_API_VERSION = "v3"
 
 RADIOLOUNGE_PLAYLIST_ID = existing_playlists["radiolounge"]
+RADIOLOUNGE_ALBUM_PLAYLIST_ID = ""
+
+BOT_ID = "U4H1K9QPL"
+AT_BOT = "<@" + BOT_ID + ">"
+
+RADIOBOT_HELP_MSG = """I can do the following: 
+    help - Print this message
+    ignore - Video provided in message will not be added to a playlist
+    skipme - Video provided will not be added to your personal playlist 
+    mine - Video provided will not be added to the collaborative playlist
+    album - Adds video to the 'albums' playlist only
+
+Commands are not case sensitive"""
 
 def send_slack(text, channel):
     slack_client.api_call("chat.postMessage", channel=channel, text=text, as_user=True)
@@ -48,10 +69,44 @@ def radiobot_do_work(slack_rtm_output):
 
                 channel = output['channel']
 
-                if 'youtube.com/watch?v=' in text:
-                    handle_youtube(text, username, channel) 
+                continue_type = ContinueType.STANDARD
+                if AT_BOT in text:
+                    continue_type = handle_bot_command(text)
 
-def handle_youtube(text, user, channel):
+                if 'youtube.com/watch?v=' in text:
+                    handle_youtube(text, username, channel, continue_type) 
+
+# Handles @ mentions, should return a boolean indicating whether the regular 
+#   handle_youtube flow should be executed
+def handle_bot_command(text, user, channel):
+    tokens = text.split(" ")
+    if tokens[0] != AT_BOT:
+        return ContinueType.STANDARD
+
+    if len(tokens) >= 2:
+        command = tokens[1].upper()
+        params = tokens[2:]
+
+        if command == "IGNORE":
+            return ContinueType.NONE
+        elif command == "MINE":
+            return ContinueType.USER_ONLY
+        elif command == "SKIPME":
+            return ContinueType.GROUP_ONLY
+        elif command == "HELP":
+            send_slack(RADIOBOT_HELP_MSG, channel)
+            return ContinueType.NONE
+        elif command == "ALBUM":
+            return ContinueType.ALBUM
+        elif command == "420":
+            send_slack(":420: :bong: bud: :bobmarley: :bud: :bong: :420:")
+            return ContinueType.STANDARD
+        else:
+            send_slack("Sorry, I didn't get that - ignoring your input just in case", channel)
+            return ContinueType.NONE
+
+
+def handle_youtube(text, user, channel, continue_type):
     global existing_playlists
     try:
         vid_id = text.split("v=")[1].replace(">", "")
@@ -67,8 +122,14 @@ def handle_youtube(text, user, channel):
                 user_playlist_id = create_youtube_playlist(user)
                 existing_playlists[user] = user_playlist_id
 
-            add_video_to_playlist(vid_id, RADIOLOUNGE_PLAYLIST_ID)
-            add_video_to_playlist(vid_id, user_playlist_id)
+            if (continue_type == ContinueType.GROUP_ONLY || continue_type == ContinueType.STANDARD):
+                add_video_to_playlist(vid_id, RADIOLOUNGE_PLAYLIST_ID)
+
+            if (continue_type == ContinueType.USER_ONLY || continue_type == ContinueType.STANDARD):
+                add_video_to_playlist(vid_id, user_playlist_id)
+
+            if (continue_type == ContinueType.ALBUM):
+                add_video_to_playlist(vid_id, RADIOLOUNGE_ALBUM_PLAYLIST_ID)
 
     except:
         print "Boo :("
@@ -88,8 +149,13 @@ if credentials is None or credentials.invalid:
 youtube = build(YOUTUBE_API_SERVICE_NAME, YOUTUBE_API_VERSION,
     http=credentials.authorize(httplib2.Http()))
 
+if "albums" in existing_playlists.keys():
+    RADIOLOUNGE_ALBUM_PLAYLIST_ID = existing_playlists["albums"]
+else:
+    existing_playlists["albums"] = create_youtube_playlist("albums")
+    RADIOLOUNGE_ALBUM_PLAYLIST_ID = existing_playlists["albums"]
+
 def create_youtube_playlist(name):
-    print "..creating youutbe playlist"
     playlists_insert_response = youtube.playlists().insert(
       part="snippet,status",
       body=dict(
