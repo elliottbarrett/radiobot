@@ -31,7 +31,7 @@ YOUTUBE_API_VERSION = "v3"
 RADIOLOUNGE_PLAYLIST_ID = ""
 RADIOLOUNGE_ALBUM_PLAYLIST_ID = ""
 
-BOT_ID = "U4H1K9QPL"
+BOT_ID = os.environ.get('BOT_ID')
 AT_BOT = "<@" + BOT_ID + ">"
 
 RADIOBOT_HELP_MSG = """I can do the following: 
