@@ -149,12 +149,6 @@ if credentials is None or credentials.invalid:
 youtube = build(YOUTUBE_API_SERVICE_NAME, YOUTUBE_API_VERSION,
     http=credentials.authorize(httplib2.Http()))
 
-if "albums" in existing_playlists.keys():
-    RADIOLOUNGE_ALBUM_PLAYLIST_ID = existing_playlists["albums"]
-else:
-    existing_playlists["albums"] = create_youtube_playlist("albums")
-    RADIOLOUNGE_ALBUM_PLAYLIST_ID = existing_playlists["albums"]
-
 def create_youtube_playlist(name):
     playlists_insert_response = youtube.playlists().insert(
       part="snippet,status",
@@ -187,6 +181,12 @@ def add_video_to_playlist(video_id, playlist_id):
     print add_video_response
 
 if __name__ == "__main__":
+    if "albums" in existing_playlists.keys():
+        RADIOLOUNGE_ALBUM_PLAYLIST_ID = existing_playlists["albums"]
+    else:
+        existing_playlists["albums"] = create_youtube_playlist("albums")
+        RADIOLOUNGE_ALBUM_PLAYLIST_ID = existing_playlists["albums"]
+
     READ_WEBSOCKET_DELAY = 1 # seconds
     if slack_client.rtm_connect():
         print("RadioBot connected and running!")
