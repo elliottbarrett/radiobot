@@ -2,7 +2,6 @@ import os
 import time
 import sys
 import httplib2
-import shelve
 
 from enum import Enum
 from slackclient import SlackClient
@@ -21,7 +20,7 @@ class ContinueType(Enum):
     ALBUM_LIST = 4
 
 slack_client = SlackClient(os.environ.get('SLACK_BOT_TOKEN'))
-existing_playlists = shelve.open('playlists.shelf') 
+existing_playlists = {}
 
 YOUTUBE_SCOPE = "https://www.googleapis.com/auth/youtube"
 YOUTUBE_CLIENT_SECRETS_FILE = "youtubeSecrets.json"
@@ -29,7 +28,7 @@ YOUTUBE_MISSING_SECRETS_MSG = "Missing Youtube client secrets"
 YOUTUBE_API_SERVICE_NAME = "youtube"
 YOUTUBE_API_VERSION = "v3"
 
-RADIOLOUNGE_PLAYLIST_ID = existing_playlists["radiolounge"]
+RADIOLOUNGE_PLAYLIST_ID = ""
 RADIOLOUNGE_ALBUM_PLAYLIST_ID = ""
 
 BOT_ID = "U4H1K9QPL"
@@ -180,7 +179,27 @@ def add_video_to_playlist(video_id, playlist_id):
     ).execute()
     print add_video_response
 
+def playlists_title_to_id():
+    """
+    Request YouTube for playlists owned by the authenticated User and return a { title: id } dictioanry.
+    """
+    title_to_id = {}
+    playlists_list_request = youtube.playlists().list(
+      part="id,snippet",
+      mine=True,
+    )
+    while playlists_list_request:
+        playlists_list_response = playlists_list_request.execute()
+        items = playlists_list_response.get('items', [])
+        title_to_id.update({ item["snippet"]["title"] : item["id"] for item in items })
+        playlists_list_request = youtube.playlists().list_next(playlists_list_request, playlists_list_response)
+
+    return title_to_id
+
 if __name__ == "__main__":
+    # cache the playlists on start.
+    existing_playlists.update(playlists_title_to_id())
+
     if "albums" in existing_playlists.keys():
         RADIOLOUNGE_ALBUM_PLAYLIST_ID = existing_playlists["albums"]
     else:
