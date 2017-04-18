@@ -122,10 +122,10 @@ def handle_youtube(text, user, channel, continue_type):
                 user_playlist_id = create_youtube_playlist(user)
                 existing_playlists[user] = user_playlist_id
 
-            if (continue_type == ContinueType.GROUP_ONLY || continue_type == ContinueType.STANDARD):
+            if (continue_type == ContinueType.GROUP_ONLY or continue_type == ContinueType.STANDARD):
                 add_video_to_playlist(vid_id, RADIOLOUNGE_PLAYLIST_ID)
 
-            if (continue_type == ContinueType.USER_ONLY || continue_type == ContinueType.STANDARD):
+            if (continue_type == ContinueType.USER_ONLY or continue_type == ContinueType.STANDARD):
                 add_video_to_playlist(vid_id, user_playlist_id)
 
             if (continue_type == ContinueType.ALBUM):
