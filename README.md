@@ -1,7 +1,7 @@
 radiobot
 ========
 
-A basic Slack integration for curating YouTube playlists.
+A basic Slackbot for curating YouTube playlists.
 
 Getting Started
 ===============
