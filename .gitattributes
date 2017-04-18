@@ -1,0 +1,5 @@
+# noramlize to lf in repo, then native endings on checkout.
+*.txt text
+*.json text
+*.md text
+*.py text
