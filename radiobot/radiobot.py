@@ -76,8 +76,8 @@ def radiobot_do_work(slack_rtm_output):
                 if 'youtube.com/watch?v=' in text:
                     handle_youtube(text, username, channel, continue_type) 
 
-# Handles @ mentions, should return a boolean indicating whether the regular 
-#   handle_youtube flow should be executed
+# Handles @ mentions, should return a ContinueType indicating which next actions are valid
+#   during the last stage of handle_youtube (if executed)
 def handle_bot_command(text, user, channel):
     tokens = text.split(" ")
     if tokens[0] != AT_BOT:
