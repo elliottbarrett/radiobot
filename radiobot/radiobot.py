@@ -70,7 +70,7 @@ def radiobot_do_work(slack_rtm_output):
 
                 continue_type = ContinueType.STANDARD
                 if AT_BOT in text:
-                    continue_type = handle_bot_command(text)
+                    continue_type = handle_bot_command(text, username, channel)
 
                 if 'youtube.com/watch?v=' in text:
                     handle_youtube(text, username, channel, continue_type) 
