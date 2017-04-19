@@ -2,7 +2,6 @@ import os
 import time
 import sys
 import httplib2
-import shelve
 
 from enum import Enum
 from slackclient import SlackClient
@@ -21,7 +20,7 @@ class ContinueType(Enum):
     ALBUM_LIST = 4
 
 slack_client = SlackClient(os.environ.get('SLACK_BOT_TOKEN'))
-existing_playlists = shelve.open('playlists.shelf') 
+existing_playlists = {}
 
 YOUTUBE_SCOPE = "https://www.googleapis.com/auth/youtube"
 YOUTUBE_CLIENT_SECRETS_FILE = "youtubeSecrets.json"
@@ -29,10 +28,10 @@ YOUTUBE_MISSING_SECRETS_MSG = "Missing Youtube client secrets"
 YOUTUBE_API_SERVICE_NAME = "youtube"
 YOUTUBE_API_VERSION = "v3"
 
-RADIOLOUNGE_PLAYLIST_ID = existing_playlists["radiolounge"]
+RADIOLOUNGE_PLAYLIST_ID = ""
 RADIOLOUNGE_ALBUM_PLAYLIST_ID = ""
 
-BOT_ID = "U4H1K9QPL"
+BOT_ID = os.environ.get('BOT_ID')
 AT_BOT = "<@" + BOT_ID + ">"
 
 RADIOBOT_HELP_MSG = """I can do the following: 
@@ -71,14 +70,17 @@ def radiobot_do_work(slack_rtm_output):
 
                 continue_type = ContinueType.STANDARD
                 if AT_BOT in text:
-                    continue_type = handle_bot_command(text)
+                    continue_type = handle_bot_command(text, username, channel)
 
                 if 'youtube.com/watch?v=' in text:
                     handle_youtube(text, username, channel, continue_type) 
 
-# Handles @ mentions, should return a ContinueType indicating which next actions are valid
-#   during the last stage of handle_youtube (if executed)
 def handle_bot_command(text, user, channel):
+    """
+    Handles @ mentions, should return a ContinueType indicating which next actions are valid
+    during the last stage of handle_youtube (if executed)
+    """
+
     tokens = text.split(" ")
     if tokens[0] != AT_BOT:
         return ContinueType.STANDARD
@@ -99,7 +101,7 @@ def handle_bot_command(text, user, channel):
         elif command == "ALBUM":
             return ContinueType.ALBUM
         elif command == "420":
-            send_slack(":420: :bong: bud: :bobmarley: :bud: :bong: :420:", channel)
+            send_slack(":420: :bong: :bud: :bobmarley: :bud: :bong: :420:", channel)
             return ContinueType.STANDARD
         else:
             send_slack("Sorry, I didn't get that - ignoring your input just in case", channel)
@@ -122,10 +124,10 @@ def handle_youtube(text, user, channel, continue_type):
                 user_playlist_id = create_youtube_playlist(user)
                 existing_playlists[user] = user_playlist_id
 
-            if (continue_type == ContinueType.GROUP_ONLY || continue_type == ContinueType.STANDARD):
+            if (continue_type == ContinueType.GROUP_ONLY or continue_type == ContinueType.STANDARD):
                 add_video_to_playlist(vid_id, RADIOLOUNGE_PLAYLIST_ID)
 
-            if (continue_type == ContinueType.USER_ONLY || continue_type == ContinueType.STANDARD):
+            if (continue_type == ContinueType.USER_ONLY or continue_type == ContinueType.STANDARD):
                 add_video_to_playlist(vid_id, user_playlist_id)
 
             if (continue_type == ContinueType.ALBUM):
@@ -148,12 +150,6 @@ if credentials is None or credentials.invalid:
 
 youtube = build(YOUTUBE_API_SERVICE_NAME, YOUTUBE_API_VERSION,
     http=credentials.authorize(httplib2.Http()))
-
-if "albums" in existing_playlists.keys():
-    RADIOLOUNGE_ALBUM_PLAYLIST_ID = existing_playlists["albums"]
-else:
-    existing_playlists["albums"] = create_youtube_playlist("albums")
-    RADIOLOUNGE_ALBUM_PLAYLIST_ID = existing_playlists["albums"]
 
 def create_youtube_playlist(name):
     playlists_insert_response = youtube.playlists().insert(
@@ -186,7 +182,33 @@ def add_video_to_playlist(video_id, playlist_id):
     ).execute()
     print add_video_response
 
+def playlists_title_to_id():
+    """
+    Request YouTube for playlists owned by the authenticated User and return a { title: id } dictioanry.
+    """
+    title_to_id = {}
+    playlists_list_request = youtube.playlists().list(
+      part="id,snippet",
+      mine=True,
+    )
+    while playlists_list_request:
+        playlists_list_response = playlists_list_request.execute()
+        items = playlists_list_response.get('items', [])
+        title_to_id.update({ item["snippet"]["title"] : item["id"] for item in items })
+        playlists_list_request = youtube.playlists().list_next(playlists_list_request, playlists_list_response)
+
+    return title_to_id
+
 if __name__ == "__main__":
+    # cache the playlists on start.
+    existing_playlists.update(playlists_title_to_id())
+
+    if "albums" in existing_playlists.keys():
+        RADIOLOUNGE_ALBUM_PLAYLIST_ID = existing_playlists["albums"]
+    else:
+        existing_playlists["albums"] = create_youtube_playlist("albums")
+        RADIOLOUNGE_ALBUM_PLAYLIST_ID = existing_playlists["albums"]
+
     READ_WEBSOCKET_DELAY = 1 # seconds
     if slack_client.rtm_connect():
         print("RadioBot connected and running!")
