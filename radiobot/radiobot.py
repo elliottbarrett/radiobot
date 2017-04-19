@@ -72,8 +72,9 @@ def radiobot_do_work(slack_rtm_output):
                 if AT_BOT in text:
                     continue_type = handle_bot_command(text, username, channel)
 
-                if 'youtube.com/watch?v=' in text:
-                    handle_youtube(text, username, channel, continue_type) 
+                if 'youtube.com/watch?v=' in text or 'youtu.be/' in text:
+                    vid_id = extract_youtube_vid_id(text)
+                    handle_youtube(vid_id, username, channel, continue_type) 
 
 def handle_bot_command(text, user, channel):
     """
@@ -107,32 +108,37 @@ def handle_bot_command(text, user, channel):
             send_slack("Sorry, I didn't get that - ignoring your input just in case", channel)
             return ContinueType.NONE
 
+def extract_youtube_vid_id(text):
+    vid_id = ""
+    if 'youtube.com/watch?v=' in text:
+        vid_id = text.split("v=")[1].replace(">", "")
+    elif 'youtu.be/' in text:
+        vid_id = text.split("be/")[1].replace(">", "")
+    if " " in vid_id:
+        vid_id = vid_id.split(" ")[0]
+    return vid_id
 
-def handle_youtube(text, user, channel, continue_type):
+def handle_youtube(vid_id, user, channel, continue_type):
     global existing_playlists
     try:
-        vid_id = text.split("v=")[1].replace(">", "")
-        if " " in vid_id:
-            vid_id = vid_id.split(" ")[0]
-        link_part = text.split("v=")[0]
-        if "youtube.com/" in link_part:
+        user_playlist_id = ""
 
-            if (continue_type == ContinueType.GROUP_ONLY or continue_type == ContinueType.STANDARD):
-                add_video_to_playlist(vid_id, existing_playlists[RADIOLOUNGE_PLAYLIST_TITLE])
+        if (continue_type == ContinueType.GROUP_ONLY or continue_type == ContinueType.STANDARD):
+            add_video_to_playlist(vid_id, existing_playlists[RADIOLOUNGE_PLAYLIST_TITLE])
 
-            if (continue_type == ContinueType.USER_ONLY or continue_type == ContinueType.STANDARD):
-                # get or create the user playlist.
-                user_playlist_id = ""
-                if user in existing_playlists:
-                    user_playlist_id = existing_playlists[user]
-                else:
-                    user_playlist_id = create_youtube_playlist(user)
-                    existing_playlists[user] = user_playlist_id
+        if (continue_type == ContinueType.USER_ONLY or continue_type == ContinueType.STANDARD):
+            # get or create the user playlist.
+            user_playlist_id = ""
+            if user in existing_playlists:
+                user_playlist_id = existing_playlists[user]
+            else:
+                user_playlist_id = create_youtube_playlist(user)
+                existing_playlists[user] = user_playlist_id
 
-                add_video_to_playlist(vid_id, user_playlist_id)
+            add_video_to_playlist(vid_id, user_playlist_id)
 
-            if (continue_type == ContinueType.ALBUM_LIST):
-                add_video_to_playlist(vid_id, existing_playlists[RADIOLOUNGE_ALBUM_PLAYLIST_TITLE])
+        if (continue_type == ContinueType.ALBUM_LIST):
+            add_video_to_playlist(vid_id, existing_playlists[RADIOLOUNGE_ALBUM_PLAYLIST_TITLE])
 
     except:
         print "Boo :("
