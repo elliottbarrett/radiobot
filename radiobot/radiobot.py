@@ -99,7 +99,7 @@ def handle_bot_command(text, user, channel):
             send_slack(RADIOBOT_HELP_MSG, channel)
             return ContinueType.NONE
         elif command == "ALBUM":
-            return ContinueType.ALBUM
+            return ContinueType.ALBUM_LIST
         elif command == "420":
             send_slack(":420: :bong: :bud: :bobmarley: :bud: :bong: :420:", channel)
             return ContinueType.STANDARD
@@ -130,7 +130,7 @@ def handle_youtube(text, user, channel, continue_type):
             if (continue_type == ContinueType.USER_ONLY or continue_type == ContinueType.STANDARD):
                 add_video_to_playlist(vid_id, user_playlist_id)
 
-            if (continue_type == ContinueType.ALBUM):
+            if (continue_type == ContinueType.ALBUM_LIST):
                 add_video_to_playlist(vid_id, RADIOLOUNGE_ALBUM_PLAYLIST_ID)
 
     except:
