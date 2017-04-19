@@ -28,8 +28,8 @@ YOUTUBE_MISSING_SECRETS_MSG = "Missing Youtube client secrets"
 YOUTUBE_API_SERVICE_NAME = "youtube"
 YOUTUBE_API_VERSION = "v3"
 
-RADIOLOUNGE_PLAYLIST_ID = ""
-RADIOLOUNGE_ALBUM_PLAYLIST_ID = ""
+RADIOLOUNGE_PLAYLIST_TITLE = "RadioLounge"
+RADIOLOUNGE_ALBUM_PLAYLIST_TITLE = "albums"
 
 BOT_ID = os.environ.get('BOT_ID')
 AT_BOT = "<@" + BOT_ID + ">"
@@ -99,7 +99,7 @@ def handle_bot_command(text, user, channel):
             send_slack(RADIOBOT_HELP_MSG, channel)
             return ContinueType.NONE
         elif command == "ALBUM":
-            return ContinueType.ALBUM
+            return ContinueType.ALBUM_LIST
         elif command == "420":
             send_slack(":420: :bong: :bud: :bobmarley: :bud: :bong: :420:", channel)
             return ContinueType.STANDARD
@@ -116,22 +116,23 @@ def handle_youtube(text, user, channel, continue_type):
             vid_id = vid_id.split(" ")[0]
         link_part = text.split("v=")[0]
         if "youtube.com/" in link_part:
-            user_playlist_id = ""
-
-            if user in existing_playlists.keys():
-                user_playlist_id = existing_playlists[user]
-            else:
-                user_playlist_id = create_youtube_playlist(user)
-                existing_playlists[user] = user_playlist_id
 
             if (continue_type == ContinueType.GROUP_ONLY or continue_type == ContinueType.STANDARD):
-                add_video_to_playlist(vid_id, RADIOLOUNGE_PLAYLIST_ID)
+                add_video_to_playlist(vid_id, existing_playlists[RADIOLOUNGE_PLAYLIST_TITLE])
 
             if (continue_type == ContinueType.USER_ONLY or continue_type == ContinueType.STANDARD):
+                # get or create the user playlist.
+                user_playlist_id = ""
+                if user in existing_playlists:
+                    user_playlist_id = existing_playlists[user]
+                else:
+                    user_playlist_id = create_youtube_playlist(user)
+                    existing_playlists[user] = user_playlist_id
+
                 add_video_to_playlist(vid_id, user_playlist_id)
 
-            if (continue_type == ContinueType.ALBUM):
-                add_video_to_playlist(vid_id, RADIOLOUNGE_ALBUM_PLAYLIST_ID)
+            if (continue_type == ContinueType.ALBUM_LIST):
+                add_video_to_playlist(vid_id, existing_playlists[RADIOLOUNGE_ALBUM_PLAYLIST_TITLE])
 
     except:
         print "Boo :("
@@ -203,11 +204,11 @@ if __name__ == "__main__":
     # cache the playlists on start.
     existing_playlists.update(playlists_title_to_id())
 
-    if "albums" in existing_playlists.keys():
-        RADIOLOUNGE_ALBUM_PLAYLIST_ID = existing_playlists["albums"]
-    else:
-        existing_playlists["albums"] = create_youtube_playlist("albums")
-        RADIOLOUNGE_ALBUM_PLAYLIST_ID = existing_playlists["albums"]
+    # create radiolounge playlists if needed.
+    if not RADIOLOUNGE_PLAYLIST_TITLE in existing_playlists:
+        create_youtube_playlist(RADIOLOUNGE_ALBUM_PLAYLIST_TITLE)
+    if not RADIOLOUNGE_ALBUM_PLAYLIST_TITLE in existing_playlists:
+        create_youtube_playlist(RADIOLOUNGE_ALBUM_PLAYLIST_TITLE)
 
     READ_WEBSOCKET_DELAY = 1 # seconds
     if slack_client.rtm_connect():
