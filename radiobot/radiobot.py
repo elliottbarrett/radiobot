@@ -2,6 +2,7 @@ import os
 import time
 import sys
 import httplib2
+import re
 
 from enum import Enum
 from slackclient import SlackClient
@@ -18,6 +19,21 @@ class ContinueType(Enum):
     USER_ONLY = 2
     GROUP_ONLY = 3
     ALBUM_LIST = 4
+
+"""
+Regular expression to capture the full url in the Slack message while
+ignoring the original url.
+See: https://api.slack.com/docs/message-formatting#linking_to_urls
+"""
+slack_url_pattern = re.compile(r'<(http(?:s)??:\/\/[^>|]+)[^>]*>')
+
+"""
+Regular expressions to capture the YouTube video Id
+"""
+youtube_url_patterns = [
+    re.compile(r'^http(?:s)??:\/\/(?:www\.)??youtube\.com/watch\?v=(?P<v>[\w\-_]+)'),
+    re.compile(r'^http(?:s)??:\/\/(?:www\.)??youtu.be/(?P<v>[\w\-_]+)'),
+]
 
 slack_client = SlackClient(os.environ.get('SLACK_BOT_TOKEN'))
 existing_playlists = {}
@@ -72,9 +88,17 @@ def radiobot_do_work(slack_rtm_output):
                 if AT_BOT in text:
                     continue_type = handle_bot_command(text, username, channel)
 
-                if 'youtube.com/watch?v=' in text or 'youtu.be/' in text:
-                    vid_id = extract_youtube_vid_id(text)
-                    handle_youtube(vid_id, username, channel, continue_type) 
+                # capture all urls in the message
+                # then handle youtube urls if there are any
+                urls = slack_url_pattern.findall(text)
+                if len(urls) > 0:
+                    for url in urls:
+                        for youtube_url_pattern in youtube_url_patterns:
+                            m = youtube_url_pattern.match(url)
+                            if m is None:
+                                continue
+                            v = m.group('v')
+                            handle_youtube(v, username, channel, continue_type)
 
 def handle_bot_command(text, user, channel):
     """
@@ -108,21 +132,10 @@ def handle_bot_command(text, user, channel):
             send_slack("Sorry, I didn't get that - ignoring your input just in case", channel)
             return ContinueType.NONE
 
-def extract_youtube_vid_id(text):
-    vid_id = ""
-    if 'youtube.com/watch?v=' in text:
-        vid_id = text.split("v=")[1].replace(">", "")
-    elif 'youtu.be/' in text:
-        vid_id = text.split("be/")[1].replace(">", "")
-    if " " in vid_id:
-        vid_id = vid_id.split(" ")[0]
-    return vid_id
 
 def handle_youtube(vid_id, user, channel, continue_type):
     global existing_playlists
     try:
-        user_playlist_id = ""
-
         if (continue_type == ContinueType.GROUP_ONLY or continue_type == ContinueType.STANDARD):
             add_video_to_playlist(vid_id, existing_playlists[RADIOLOUNGE_PLAYLIST_TITLE])
 
@@ -228,9 +241,6 @@ if __name__ == "__main__":
 
 # TODO:
 # - Composite user playlist feature
-# - Host radiobot somewhere persistent
-# - "Ignore video" feature (personal & global)
 # - Deal with "playlist full" response
 # - Tagged/Named playlists
-# - "Acknowledge 4:20" feature
 # - Spotify, I _suppose_ (edited)
