@@ -121,8 +121,6 @@ def extract_youtube_vid_id(text):
 def handle_youtube(vid_id, user, channel, continue_type):
     global existing_playlists
     try:
-        user_playlist_id = ""
-
         if (continue_type == ContinueType.GROUP_ONLY or continue_type == ContinueType.STANDARD):
             add_video_to_playlist(vid_id, existing_playlists[RADIOLOUNGE_PLAYLIST_TITLE])
 
