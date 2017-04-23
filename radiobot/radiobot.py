@@ -241,9 +241,6 @@ if __name__ == "__main__":
 
 # TODO:
 # - Composite user playlist feature
-# - Host radiobot somewhere persistent
-# - "Ignore video" feature (personal & global)
 # - Deal with "playlist full" response
 # - Tagged/Named playlists
-# - "Acknowledge 4:20" feature
 # - Spotify, I _suppose_ (edited)
