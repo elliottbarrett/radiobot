@@ -19,6 +19,7 @@ class ContinueType(Enum):
     USER_ONLY = 2
     GROUP_ONLY = 3
     ALBUM_LIST = 4
+    HASHTAGS = 5
 
 """
 Regular expression to capture the full url in the Slack message while
@@ -50,14 +51,19 @@ RADIOLOUNGE_ALBUM_PLAYLIST_TITLE = "albums"
 BOT_ID = os.environ.get('BOT_ID')
 AT_BOT = "<@" + BOT_ID + ">"
 
-RADIOBOT_HELP_MSG = """I can do the following: 
+RADIOBOT_HELP_MSG = """
+:salame: I add videos to YouTube playlists associated with this channel and your username!
+There's also support for hashtags -- be liberal with #summer.
+
+Additionally, I can do the following: 
     help - Print this message
-    ignore - Video provided in message will not be added to a playlist
+    ignore - Video provided in message will not be added to any playlist, including hashtags
     skipme - Video provided will not be added to your personal playlist 
     mine - Video provided will not be added to the collaborative playlist
     album - Adds video to the 'albums' playlist only
 
-Commands are not case sensitive"""
+These commands are not case sensitive, but require the @radiobot prefix to work.
+"""
 
 def send_slack(text, channel):
     slack_client.api_call("chat.postMessage", channel=channel, text=text, as_user=True)
@@ -78,34 +84,44 @@ def radiobot_do_work(slack_rtm_output):
         for output in output_list:
             if output and 'text' in output:
                 # return text after the @ mention, whitespace removed
-                text = output['text']
+                msg_text = output['text']
                 user = output['user']
                 username = slack_username(user)
-
                 channel = output['channel']
 
                 continue_type = ContinueType.STANDARD
-                if AT_BOT in text:
-                    continue_type = handle_bot_command(text, username, channel)
+                
+                hashtags = find_hashtags(msg_text)
+                
+                if AT_BOT in msg_text:
+                    continue_type = handle_bot_command(msg_text, username, channel)
 
                 # capture all urls in the message
                 # then handle youtube urls if there are any
-                urls = slack_url_pattern.findall(text)
+                urls = slack_url_pattern.findall(msg_text)
                 if len(urls) > 0:
                     for url in urls:
                         for youtube_url_pattern in youtube_url_patterns:
-                            m = youtube_url_pattern.match(url)
-                            if m is None:
+                            match = youtube_url_pattern.match(url)
+                            if match is None:
                                 continue
-                            v = m.group('v')
-                            handle_youtube(v, username, channel, continue_type)
+                            vid_id = m.group('v')
+                            handle_youtube(vid_id, username, channel, hashtags, continue_type)
+
+def find_hashtags(msg):
+    hashtags = []
+    tokens = msg.split(" ")
+    for token in tokens:
+        if token.startswith("#"):
+            hashtags.append(token[1:])
+    return hashtags
+            
 
 def handle_bot_command(text, user, channel):
     """
     Handles @ mentions, should return a ContinueType indicating which next actions are valid
     during the last stage of handle_youtube (if executed)
     """
-
     tokens = text.split(" ")
     if tokens[0] != AT_BOT:
         return ContinueType.STANDARD
@@ -132,8 +148,7 @@ def handle_bot_command(text, user, channel):
             send_slack("Sorry, I didn't get that - ignoring your input just in case", channel)
             return ContinueType.NONE
 
-
-def handle_youtube(vid_id, user, channel, continue_type):
+def handle_youtube(vid_id, user, channel, hashtags, continue_type):
     global existing_playlists
     try:
         if (continue_type == ContinueType.GROUP_ONLY or continue_type == ContinueType.STANDARD):
@@ -152,6 +167,17 @@ def handle_youtube(vid_id, user, channel, continue_type):
 
         if (continue_type == ContinueType.ALBUM_LIST):
             add_video_to_playlist(vid_id, existing_playlists[RADIOLOUNGE_ALBUM_PLAYLIST_TITLE])
+
+        if continue_type != ContinueType.IGNORE:
+            for tag in hashtags:
+                tag_playlist_id = ""
+                if tag in existing_playlists:
+                    tag_playlist_id = existing_playlists[tag]
+                else:
+                    tag_playlist_id = create_youtube_playlist(tag)
+                    existing_playlists[tag] = tag_playlist_id
+
+                add_video_to_playlist(vid_id, tag_playlist_id)
 
     except:
         print "Boo :("
@@ -240,7 +266,5 @@ if __name__ == "__main__":
 
 
 # TODO:
-# - Composite user playlist feature
 # - Deal with "playlist full" response
-# - Tagged/Named playlists
 # - Spotify, I _suppose_ (edited)
