@@ -19,7 +19,6 @@ class ContinueType(Enum):
     USER_ONLY = 2
     GROUP_ONLY = 3
     ALBUM_LIST = 4
-    HASHTAGS = 5
 
 """
 Regular expression to capture the full url in the Slack message while
