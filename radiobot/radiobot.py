@@ -250,9 +250,11 @@ if __name__ == "__main__":
 
     # create radiolounge playlists if needed.
     if not RADIOLOUNGE_PLAYLIST_TITLE in existing_playlists:
-        create_youtube_playlist(RADIOLOUNGE_PLAYLIST_TITLE)
+        new_id = create_youtube_playlist(RADIOLOUNGE_PLAYLIST_TITLE)
+        existing_playlists[RADIOLOUNGE_PLAYLIST_TITLE] = new_id
     if not RADIOLOUNGE_ALBUM_PLAYLIST_TITLE in existing_playlists:
-        create_youtube_playlist(RADIOLOUNGE_ALBUM_PLAYLIST_TITLE)
+        new_id = create_youtube_playlist(RADIOLOUNGE_ALBUM_PLAYLIST_TITLE)
+        existing_playlists[RADIOLOUNGE_ALBUM_PLAYLIST_TITLE] = new_id
 
     READ_WEBSOCKET_DELAY = 1 # seconds
     if slack_client.rtm_connect():
