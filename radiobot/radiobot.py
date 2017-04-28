@@ -14,7 +14,7 @@ from oauth2client.tools import run_flow
 from apiclient.discovery import build
 
 class ContinueType(Enum):
-    NONE = 0
+    IGNORE = 0
     STANDARD = 1
     USER_ONLY = 2
     GROUP_ONLY = 3
@@ -63,6 +63,7 @@ Additionally, I can do the following:
 
 These commands are not case sensitive, but require the @radiobot prefix to work.
 """
+
 
 def send_slack(text, channel):
     slack_client.api_call("chat.postMessage", channel=channel, text=text, as_user=True)
@@ -130,22 +131,21 @@ def handle_bot_command(text, user, channel):
         params = tokens[2:]
 
         if command == "IGNORE":
-            return ContinueType.NONE
+            return ContinueType.IGNORE
         elif command == "MINE":
             return ContinueType.USER_ONLY
         elif command == "SKIPME":
             return ContinueType.GROUP_ONLY
         elif command == "HELP":
             send_slack(RADIOBOT_HELP_MSG, channel)
-            return ContinueType.NONE
+            return ContinueType.IGNORE
         elif command == "ALBUM":
             return ContinueType.ALBUM_LIST
         elif command == "420":
             send_slack(":420: :bong: :bud: :bobmarley: :bud: :bong: :420:", channel)
             return ContinueType.STANDARD
         else:
-            send_slack("Sorry, I didn't get that - ignoring your input just in case", channel)
-            return ContinueType.NONE
+            return ContinueType.STANDARD
 
 def handle_youtube(vid_id, user, channel, hashtags, continue_type):
     global existing_playlists
