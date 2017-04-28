@@ -108,11 +108,11 @@ def radiobot_do_work(slack_rtm_output):
                             handle_youtube(vid_id, username, channel, hashtags, continue_type)
 
 def find_hashtags(msg):
-    hashtags = []
+    hashtags = set()
     tokens = msg.split(" ")
     for token in tokens:
         if token.startswith("#"):
-            hashtags.append(token[1:])
+            hashtags.add(token[1:])
     return hashtags
             
 
