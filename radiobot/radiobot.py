@@ -167,7 +167,7 @@ def handle_youtube(vid_id, user, channel, hashtags, continue_type):
         if (continue_type == ContinueType.ALBUM_LIST):
             add_video_to_playlist(vid_id, existing_playlists[RADIOLOUNGE_ALBUM_PLAYLIST_TITLE])
 
-        if continue_type != ContinueType.None:
+        if continue_type != ContinueType.IGNORE:
             for tag in hashtags:
                 tag_playlist_id = ""
                 if tag in existing_playlists:
