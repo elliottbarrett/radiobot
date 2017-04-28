@@ -104,7 +104,7 @@ def radiobot_do_work(slack_rtm_output):
                             match = youtube_url_pattern.match(url)
                             if match is None:
                                 continue
-                            vid_id = m.group('v')
+                            vid_id = match.group('v')
                             handle_youtube(vid_id, username, channel, hashtags, continue_type)
 
 def find_hashtags(msg):
@@ -250,7 +250,7 @@ if __name__ == "__main__":
 
     # create radiolounge playlists if needed.
     if not RADIOLOUNGE_PLAYLIST_TITLE in existing_playlists:
-        create_youtube_playlist(RADIOLOUNGE_ALBUM_PLAYLIST_TITLE)
+        create_youtube_playlist(RADIOLOUNGE_PLAYLIST_TITLE)
     if not RADIOLOUNGE_ALBUM_PLAYLIST_TITLE in existing_playlists:
         create_youtube_playlist(RADIOLOUNGE_ALBUM_PLAYLIST_TITLE)
 
