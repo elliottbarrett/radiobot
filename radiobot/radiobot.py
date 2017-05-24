@@ -56,7 +56,7 @@ There's also support for hashtags -- be liberal with #summer.
 
 Additionally, I can do the following: 
     help - Print this message
-    ignore - Video provided in message will not be added to any playlist, including hashtags
+    ignore - Video provided in message will only be added to lists associated with hashtags
     skipme - Video provided will not be added to your personal playlist 
     mine - Video provided will not be added to the collaborative playlist
     album - Adds video to the 'albums' playlist only
@@ -123,12 +123,13 @@ def handle_bot_command(text, user, channel):
     during the last stage of handle_youtube (if executed)
     """
     tokens = text.split(" ")
-    if tokens[0] != AT_BOT:
+    command_index = tokens.index(AT_BOT) + 1
+
+    if len(tokens) <= command_index:
         return ContinueType.STANDARD
 
     if len(tokens) >= 2:
-        command = tokens[1].upper()
-        params = tokens[2:]
+        command = tokens[command_index].upper()
 
         if command == "IGNORE":
             return ContinueType.IGNORE
@@ -167,16 +168,15 @@ def handle_youtube(vid_id, user, channel, hashtags, continue_type):
         if (continue_type == ContinueType.ALBUM_LIST):
             add_video_to_playlist(vid_id, existing_playlists[RADIOLOUNGE_ALBUM_PLAYLIST_TITLE])
 
-        if continue_type != ContinueType.IGNORE:
-            for tag in hashtags:
-                tag_playlist_id = ""
-                if tag in existing_playlists:
-                    tag_playlist_id = existing_playlists[tag]
-                else:
-                    tag_playlist_id = create_youtube_playlist(tag)
-                    existing_playlists[tag] = tag_playlist_id
+        for tag in hashtags:
+            tag_playlist_id = ""
+            if tag in existing_playlists:
+                tag_playlist_id = existing_playlists[tag]
+            else:
+                tag_playlist_id = create_youtube_playlist(tag)
+                existing_playlists[tag] = tag_playlist_id
 
-                add_video_to_playlist(vid_id, tag_playlist_id)
+            add_video_to_playlist(vid_id, tag_playlist_id)
 
     except:
         print "Boo :("
